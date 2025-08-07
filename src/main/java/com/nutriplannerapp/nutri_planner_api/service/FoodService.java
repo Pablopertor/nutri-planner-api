@@ -23,39 +23,52 @@ public class FoodService implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // Creamos algunas comidas de ejemplo
-        Food pollo = new Food();
-        pollo.setName("Pechuga de pollo a la plancha (100g)");
-        pollo.setCalories(165);
-        pollo.setProteins(31);
-        pollo.setFats(3.6);
-        pollo.setCarbs(0);
+        // Limpiamos la base de datos en cada inicio para evitar duplicados
+        foodRepository.deleteAll();
 
-        Food arroz = new Food();
-        arroz.setName("Arroz blanco cocido (100g)");
-        arroz.setCalories(130);
-        arroz.setProteins(2.7);
-        arroz.setFats(0.3);
-        arroz.setCarbs(28);
+        // --- FUENTES DE PROTEÍNA ---
+        Food f1 = new Food("Pechuga de pollo (100g)", 165, 31, 0, 3.6);
+        Food f2 = new Food("Pechuga de pavo (100g)", 135, 30, 0, 1.5);
+        Food f3 = new Food("Lomo de ternera magro (100g)", 200, 26, 0, 10);
+        Food f4 = new Food("Claras de huevo (100g)", 52, 11, 1, 0.2);
+        Food f5 = new Food("Salmón (100g)", 208, 20, 0, 13);
+        Food f6 = new Food("Atún en agua (lata 80g escurrido)", 100, 24, 0, 0.5);
+        Food f7 = new Food("Lentejas cocidas (100g)", 116, 9, 20, 0.4);
+        Food f8 = new Food("Garbanzos cocidos (100g)", 139, 8.4, 26, 2.4);
+        Food f9 = new Food("Tofu firme (100g)", 145, 16, 3, 9);
+        Food f10 = new Food("Merluza (100g)", 89, 16, 0, 2.8);
+        Food f11 = new Food("Queso cottage (100g)", 98, 11, 3.4, 4.3);
 
-        Food brocoli = new Food();
-        brocoli.setName("Brócoli al vapor (100g)");
-        brocoli.setCalories(55);
-        brocoli.setProteins(3.7);
-        brocoli.setFats(0.6);
-        brocoli.setCarbs(11.2);
+        // --- FUENTES DE CARBOHIDRATOS ---
+        Food f12 = new Food("Arroz integral cocido (100g)", 111, 2.6, 23, 0.9);
+        Food f13 = new Food("Avena en copos (100g)", 389, 16.9, 66, 6.9);
+        Food f14 = new Food("Quinoa cocida (100g)", 120, 4.4, 21, 1.9);
+        Food f15 = new Food("Patata cocida (100g)", 87, 2, 20, 0.1);
+        Food f16 = new Food("Boniato asado (100g)", 90, 2, 21, 0.1);
+        Food f17 = new Food("Pan integral (100g)", 247, 13, 49, 3.2);
+        Food f18 = new Food("Pasta integral cocida (100g)", 124, 5, 26, 0.8);
+        Food f19 = new Food("Manzana (unidad mediana)", 95, 0.5, 25, 0.3);
+        Food f20 = new Food("Plátano (unidad mediana)", 105, 1.3, 27, 0.4);
+        Food f21 = new Food("Cuscús cocido (100g)", 112, 3.8, 23, 0.2);
 
-        Food salmon = new Food();
-        salmon.setName("Salmón a la plancha (100g)");
-        salmon.setCalories(208);
-        salmon.setProteins(20);
-        salmon.setFats(13);
-        salmon.setCarbs(0);
+        // --- FUENTES DE GRASAS SALUDABLES Y VERDURAS ---
+        Food f22 = new Food("Aguacate (100g)", 160, 2, 8.5, 15);
+        Food f23 = new Food("Aceite de oliva virgen extra (cucharada 15ml)", 120, 0, 0, 14);
+        Food f24 = new Food("Almendras (30g)", 164, 6, 6, 14);
+        Food f25 = new Food("Nueces (30g)", 185, 4.3, 3.9, 18.5);
+        Food f26 = new Food("Semillas de chía (cucharada 15g)", 73, 2.5, 6.3, 4.6);
+        Food f27 = new Food("Huevo entero cocido (unidad grande)", 78, 6.3, 0.6, 5.3);
+        Food f28 = new Food("Brócoli (100g)", 55, 3.7, 11.2, 0.6);
+        Food f29 = new Food("Espinacas (100g)", 23, 2.9, 3.6, 0.4);
+        Food f30 = new Food("Pimiento rojo (100g)", 31, 1, 6, 0.3);
 
-        // Guardamos las comidas en la base de datos
-        foodRepository.saveAll(Arrays.asList(pollo, arroz, brocoli, salmon));
 
-
+        // Guardamos todos los alimentos en la base de datos de una sola vez
+        foodRepository.saveAll(List.of(
+                f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12,
+                f13, f14, f15, f16, f17, f18, f19, f20, f21, f22, f23,
+                f24, f25, f26, f27, f28, f29, f30
+        ));
 
         }
     public List<Food> getAll() {
@@ -83,7 +96,15 @@ public class FoodService implements CommandLineRunner {
         System.out.println("Grasas: " + String.format("%.2f", fatGrams) + " g");
         System.out.println("Carbohidratos: " + String.format("%.2f", carbsGrams) + " g");
         System.out.println("------------------------------------");
-        // Paso 6: Seguimos de momento devolviendo toda nuestra lista de comida
-        return foodRepository.findAll();
+        // ---- PASO 6: ALGORITMO DE SELECCIÓN (Versión 1 - Aleatoria) ----
+        List<Food> allFoods = foodRepository.findAll();
+        // Si tenemos menos de 3 alimentos en la BD, devolvemos lo que haya.
+        if (allFoods.size() <= 3) {
+            return allFoods;
+        }
+        // Desordenamos la lista de alimentos de forma aleatoria
+        java.util.Collections.shuffle(allFoods);
+        // Devolvemos una nueva lista que contiene solo los 3 primeros elementos de la lista desordenada
+        return allFoods.subList(0, 3);
     }
 }
