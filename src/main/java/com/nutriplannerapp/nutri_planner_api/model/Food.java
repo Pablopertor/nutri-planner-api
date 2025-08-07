@@ -8,16 +8,16 @@ import lombok.Data;
 
 @Data
 @Entity
-public class Comida {
+public class Food {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String nombre;
-    private double calorias;
-    private double proteinas;
-    private double carbohidratos;
-    private double grasas;
+    private String name;
+    private double calories;
+    private double proteins;
+    private double carbs;
+    private double fats;
 
 }
