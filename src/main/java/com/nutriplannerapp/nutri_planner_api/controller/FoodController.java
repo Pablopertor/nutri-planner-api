@@ -1,6 +1,7 @@
 package com.nutriplannerapp.nutri_planner_api.controller;
 
 import com.nutriplannerapp.nutri_planner_api.dto.RecommendationRequest;
+import com.nutriplannerapp.nutri_planner_api.dto.RecommendedFoodDTO;
 import com.nutriplannerapp.nutri_planner_api.model.Food;
 import com.nutriplannerapp.nutri_planner_api.service.FoodService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +22,7 @@ public class FoodController {
     }
 
     @PostMapping("/recommendations")
-    public List<Food> createRecommendation(@RequestBody RecommendationRequest request) {
+    public List<RecommendedFoodDTO> createRecommendation(@RequestBody RecommendationRequest request) {
         // El controlador delega toda la lógica al servicio
         return foodService.generateRecommendation(request);
     }

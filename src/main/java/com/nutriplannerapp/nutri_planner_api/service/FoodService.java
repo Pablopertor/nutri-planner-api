@@ -1,6 +1,7 @@
 package com.nutriplannerapp.nutri_planner_api.service;
 
 import com.nutriplannerapp.nutri_planner_api.dto.RecommendationRequest;
+import com.nutriplannerapp.nutri_planner_api.dto.RecommendedFoodDTO;
 import com.nutriplannerapp.nutri_planner_api.model.Food;
 import com.nutriplannerapp.nutri_planner_api.repository.FoodRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,12 +76,12 @@ public class FoodService implements CommandLineRunner {
         return foodRepository.findAll();
     }
 
-    public List<Food> generateRecommendation(RecommendationRequest request) {
+    public List<RecommendedFoodDTO> generateRecommendation(RecommendationRequest request) {
         // Paso 1: Imprimir los datos recibidos para depurar y ver que llegan bien.
         System.out.println("Generando recomendación para la petición: " + request);
         // Paso 2: Vamos con el calculo de las proteinas en funcion del peso y de los g/kgs de peso del usuario
-        double totalProteinGrams = request.getProteinPerKg()* request.getUserWeight();
-        double proteinCalories= totalProteinGrams * CALORIES_PER_PROTEIN_GRAM;
+        double proteinGrams = request.getProteinPerKg()* request.getUserWeight();
+        double proteinCalories= proteinGrams * CALORIES_PER_PROTEIN_GRAM;
         // Paso 3: Una vez obtenidas las calorias de la proteina, vamos a calcular las kcal restantes y su distribucion en grasas y carbohidratos
         double totalKcal = request.getTotalCalories();
         double kCalLeft = totalKcal-proteinCalories;
@@ -92,19 +93,48 @@ public class FoodService implements CommandLineRunner {
         // Paso 5: Vamos a imprimir en la consola los resultados
         System.out.println("--- CÁLCULO DE MACROS OBJETIVO ---");
         System.out.println("Calorías Totales: " + request.getTotalCalories() + " kcal");
-        System.out.println("Proteínas: " + String.format("%.2f", totalProteinGrams) + " g");
+        System.out.println("Proteínas: " + String.format("%.2f", proteinGrams) + " g");
         System.out.println("Grasas: " + String.format("%.2f", fatGrams) + " g");
         System.out.println("Carbohidratos: " + String.format("%.2f", carbsGrams) + " g");
         System.out.println("------------------------------------");
-        // ---- PASO 6: ALGORITMO DE SELECCIÓN (Versión 1 - Aleatoria) ----
+        // Paso 6: Version de algoritmo que busca los alimentos mas densos de cada macro
         List<Food> allFoods = foodRepository.findAll();
-        // Si tenemos menos de 3 alimentos en la BD, devolvemos lo que haya.
-        if (allFoods.size() <= 3) {
-            return allFoods;
+
+        Food proteinSource = null;
+        Food carbSource = null;
+        Food fatSource = null;
+
+        double maxProtein = -1;
+        double maxCarbs = -1;
+        double maxFats = -1;
+
+        for (Food food : allFoods) {
+            // Encontrar la mejor fuente de proteína
+            if (food.getProteins() > maxProtein) {
+                maxProtein = food.getProteins();
+                proteinSource = food;
+            }
+            // Encontrar la mejor fuente de carbohidratos
+            if (food.getCarbs() > maxCarbs) {
+                maxCarbs = food.getCarbs();
+                carbSource = food;
+            }
+            // Encontrar la mejor fuente de grasas
+            if (food.getFats() > maxFats) {
+                maxFats = food.getFats();
+                fatSource = food;
+            }
         }
-        // Desordenamos la lista de alimentos de forma aleatoria
-        java.util.Collections.shuffle(allFoods);
-        // Devolvemos una nueva lista que contiene solo los 3 primeros elementos de la lista desordenada
-        return allFoods.subList(0, 3);
+        double proteinSourceGrams = Math.round(proteinGrams * 100 / proteinSource.getProteins());
+        double carbSourceGrams = Math.round(carbsGrams * 100 / carbSource.getCarbs());
+        double fatSourceGrams = Math.round(fatGrams * 100 / fatSource.getFats());
+
+        // --- PASO FINAL: CREAR Y DEVOLVER LA LISTA DE DTOs ---
+        RecommendedFoodDTO recommendedProtein = new RecommendedFoodDTO(proteinSource, proteinSourceGrams);
+        RecommendedFoodDTO recommendedCarb = new RecommendedFoodDTO(carbSource, carbSourceGrams);
+        RecommendedFoodDTO recommendedFat = new RecommendedFoodDTO(fatSource, fatSourceGrams);
+
+        // Devolvemos la nueva lista de DTOs
+        return List.of(recommendedProtein, recommendedCarb, recommendedFat);
     }
 }
