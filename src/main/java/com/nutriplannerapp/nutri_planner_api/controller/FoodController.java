@@ -21,9 +21,8 @@ public class FoodController {
     }
 
     @PostMapping("/recommendations")
-    public RecommendationRequest createRecommendation(@RequestBody RecommendationRequest request) {
-        // Por ahora, solo devolvemos la misma petición que recibimos para confirmar que funciona.
-        System.out.println("Petición recibida: " + request);
-        return request;
+    public List<Food> createRecommendation(@RequestBody RecommendationRequest request) {
+        // El controlador delega toda la lógica al servicio
+        return foodService.generateRecommendation(request);
     }
 }

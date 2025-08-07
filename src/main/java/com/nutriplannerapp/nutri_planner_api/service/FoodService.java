@@ -1,5 +1,6 @@
 package com.nutriplannerapp.nutri_planner_api.service;
 
+import com.nutriplannerapp.nutri_planner_api.dto.RecommendationRequest;
 import com.nutriplannerapp.nutri_planner_api.model.Food;
 import com.nutriplannerapp.nutri_planner_api.repository.FoodRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,5 +55,16 @@ public class FoodService implements CommandLineRunner {
         }
     public List<Food> getAll() {
         return foodRepository.findAll();
+    }
+
+    public List<Food> generateRecommendation(RecommendationRequest request) {
+        // Paso 1: Imprimir los datos recibidos para depurar y ver que llegan bien.
+        System.out.println("Generando recomendación para la petición: " + request);
+
+        // Paso 2: Implementar la lógica (Versión 1 - muy simple).
+        // Por ahora, simplemente devolvemos todos los alimentos que tenemos en la BD.
+        // En el futuro, aquí irá el algoritmo inteligente.
+        List<Food> allFoods = foodRepository.findAll();
+        return allFoods;
     }
 }
