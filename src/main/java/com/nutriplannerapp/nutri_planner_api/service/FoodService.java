@@ -33,7 +33,7 @@ public class FoodService implements CommandLineRunner {
         Food f3 = new Food("Lomo de ternera magro (100g)", 200, 26, 0, 10);
         Food f4 = new Food("Claras de huevo (100g)", 52, 11, 1, 0.2);
         Food f5 = new Food("Salmón (100g)", 208, 20, 0, 13);
-        Food f6 = new Food("Atún en agua (lata 80g escurrido)", 100, 24, 0, 0.5);
+        Food f6 = new Food("Atún en agua (100g)", 100, 24, 0, 0.5);
         Food f7 = new Food("Lentejas cocidas (100g)", 116, 9, 20, 0.4);
         Food f8 = new Food("Garbanzos cocidos (100g)", 139, 8.4, 26, 2.4);
         Food f9 = new Food("Tofu firme (100g)", 145, 16, 3, 9);
@@ -48,17 +48,17 @@ public class FoodService implements CommandLineRunner {
         Food f16 = new Food("Boniato asado (100g)", 90, 2, 21, 0.1);
         Food f17 = new Food("Pan integral (100g)", 247, 13, 49, 3.2);
         Food f18 = new Food("Pasta integral cocida (100g)", 124, 5, 26, 0.8);
-        Food f19 = new Food("Manzana (unidad mediana)", 95, 0.5, 25, 0.3);
-        Food f20 = new Food("Plátano (unidad mediana)", 105, 1.3, 27, 0.4);
+        Food f19 = new Food("Manzana (100g)", 95, 0.5, 25, 0.3);
+        Food f20 = new Food("Plátano (100g)", 105, 1.3, 27, 0.4);
         Food f21 = new Food("Cuscús cocido (100g)", 112, 3.8, 23, 0.2);
 
         // --- FUENTES DE GRASAS SALUDABLES Y VERDURAS ---
         Food f22 = new Food("Aguacate (100g)", 160, 2, 8.5, 15);
-        Food f23 = new Food("Aceite de oliva virgen extra (cucharada 15ml)", 120, 0, 0, 14);
-        Food f24 = new Food("Almendras (30g)", 164, 6, 6, 14);
-        Food f25 = new Food("Nueces (30g)", 185, 4.3, 3.9, 18.5);
-        Food f26 = new Food("Semillas de chía (cucharada 15g)", 73, 2.5, 6.3, 4.6);
-        Food f27 = new Food("Huevo entero cocido (unidad grande)", 78, 6.3, 0.6, 5.3);
+        Food f23 = new Food("Aceite de oliva virgen extra (100g)", 900, 0, 0, 100);
+        Food f24 = new Food("Almendras (100g)", 164*3.33, 6*3.33, 6*3.33, 14*3.33);
+        Food f25 = new Food("Nueces (100g)", 185*3.33, 4.3*3.33, 3.9*3.33, 18.5*3.33);
+        Food f26 = new Food("Semillas de chía (100g)", 73*6.66, 2.5*6.66, 6.3*6.66, 4.6*6.66);
+        Food f27 = new Food("Huevo entero cocido (100g)", 78*2, 6.3*2, 0.6*2, 5.3*2);
         Food f28 = new Food("Brócoli (100g)", 55, 3.7, 11.2, 0.6);
         Food f29 = new Food("Espinacas (100g)", 23, 2.9, 3.6, 0.4);
         Food f30 = new Food("Pimiento rojo (100g)", 31, 1, 6, 0.3);
@@ -126,8 +126,8 @@ public class FoodService implements CommandLineRunner {
             }
         }
         double proteinSourceGrams = Math.round(proteinGrams * 100 / proteinSource.getProteins());
-        double carbSourceGrams = Math.round(carbsGrams * 100 / carbSource.getCarbs());
-        double fatSourceGrams = Math.round(fatGrams * 100 / fatSource.getFats());
+        double carbSourceGrams = Math.round((carbsGrams * 100 / carbSource.getCarbs() - (proteinSourceGrams * proteinSource.getCarbs()/100)));
+        double fatSourceGrams = Math.round(fatGrams * 100 / fatSource.getFats() - ((proteinSourceGrams * proteinSource.getFats()/100)+ (carbSourceGrams * carbSource.getFats()/100)));
 
         // --- PASO FINAL: CREAR Y DEVOLVER LA LISTA DE DTOs ---
         RecommendedFoodDTO recommendedProtein = new RecommendedFoodDTO(proteinSource, proteinSourceGrams);
