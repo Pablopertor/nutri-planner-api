@@ -6,6 +6,8 @@ import com.nutriplannerapp.nutri_planner_api.repository.FoodRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -27,16 +29,40 @@ public class FoodService {
      * Orquesta el proceso de generación de una recomendación de 3 comidas.
      */
     public RecommendationResponseDTO generateRecommendation(RecommendationRequest request) {
-        // 1. Calcular los objetivos de macronutrientes
-        MacroTargets targets = calculateMacroTargets(request);
+        // 1. Calcular los objetivos DIARIOS totales
+        MacroTargets dailyTargets = calculateMacroTargets(request);
 
-        // 2. Encontrar alimentos y calcular sus cantidades
-        List<RecommendedFoodDTO> recommendationList = findAndAllocateFoods(targets);
-        // 3. Hacer resumen de los resultados
-        MacroSummaryDTO summary = calculateSummary(recommendationList);
+        // 2. Calcular los objetivos POR COMIDA (total / 3)
+        MacroTargets mealTargets = new MacroTargets(
+                dailyTargets.getProteins() / 3,
+                dailyTargets.getFats() / 3,
+                dailyTargets.getCarbs() / 3
+        );
+        System.out.println(String.format("OBJETIVO POR COMIDA -> Proteína: %.2fg, Grasas: %.2fg, Carbs: %.2fg",
+                mealTargets.getProteins(), mealTargets.getFats(), mealTargets.getCarbs()));
 
-        // Devolvemos el objeto de respuesta final que contiene la lista y el resumen
-        return new RecommendationResponseDTO(recommendationList, summary);
+        // 3. Buscar los 3 MEJORES candidatos para cada macronutriente
+        List<Food> allFoods = foodRepository.findAll();
+        List<Food> top3ProteinSources = findTopNFoodsForMacro(new ArrayList<>(allFoods), "protein", 3);
+        List<Food> top3CarbSources = findTopNFoodsForMacro(new ArrayList<>(allFoods), "carbs", 3);
+        List<Food> top3FatSources = findTopNFoodsForMacro(new ArrayList<>(allFoods), "fat", 3);
+
+        // 4. Añadimos aleatoriedad desordenando las listas de candidatos
+        Collections.shuffle(top3ProteinSources);
+        Collections.shuffle(top3CarbSources);
+        Collections.shuffle(top3FatSources);
+
+        // 5. Construir las 3 comidas
+        List<RecommendedFoodDTO> finalRecommendation = new ArrayList<>();
+        if (top3ProteinSources.size() >= 3 && top3CarbSources.size() >= 3 && top3FatSources.size() >= 3) {
+            finalRecommendation.addAll(buildMeal(mealTargets, top3ProteinSources.get(0), top3CarbSources.get(0), top3FatSources.get(0)));
+            finalRecommendation.addAll(buildMeal(mealTargets, top3ProteinSources.get(1), top3CarbSources.get(1), top3FatSources.get(1)));
+            finalRecommendation.addAll(buildMeal(mealTargets, top3ProteinSources.get(2), top3CarbSources.get(2), top3FatSources.get(2)));
+        }
+
+        // 6. Calcular el resumen final y devolver la respuesta
+        MacroSummaryDTO summary = calculateSummary(finalRecommendation);
+        return new RecommendationResponseDTO(finalRecommendation, summary);
     }
 
     /**
@@ -46,7 +72,10 @@ public class FoodService {
         return foodRepository.findAll();
     }
 
+    // =================================================================
     // --- MÉTODOS PRIVADOS (LÓGICA INTERNA) ---
+    // =================================================================
+
     /**
      * Calcula los gramos objetivo para cada macronutriente a partir de la petición del usuario.
      */
@@ -57,111 +86,118 @@ public class FoodService {
         double totalFatGrams = (remainingCalories * (request.getFatPercentage() / 100.0)) / CALORIES_PER_FAT_GRAM;
         double totalCarbsGrams = (remainingCalories * (request.getCarbsPercentage() / 100.0)) / CALORIES_PER_CARB_GRAM;
 
-        System.out.println(String.format("OBJETIVO CALCULADO -> Proteína: %.2fg, Grasas: %.2fg, Carbs: %.2fg", totalProteinGrams, totalFatGrams, totalCarbsGrams));
+        System.out.println(String.format("OBJETIVO DIARIO CALCULADO -> Proteína: %.2fg, Grasas: %.2fg, Carbs: %.2fg", totalProteinGrams, totalFatGrams, totalCarbsGrams));
 
         return new MacroTargets(totalProteinGrams, totalFatGrams, totalCarbsGrams);
     }
 
     /**
-     * Implementa el algoritmo secuencial para seleccionar 3 alimentos y calcular sus cantidades.
+     * Construye UNA comida a partir de los objetivos y las fuentes de macros dadas.
      */
-    private List<RecommendedFoodDTO> findAndAllocateFoods(MacroTargets targets) {
-        List<Food> allFoods = foodRepository.findAll();
-        List<RecommendedFoodDTO> recommendation = new java.util.ArrayList<>();
+    private List<RecommendedFoodDTO> buildMeal(MacroTargets mealTargets, Food proteinSource, Food carbSource, Food fatSource) {
+        List<RecommendedFoodDTO> meal = new ArrayList<>();
 
-        double remainingProteins = targets.getProteins();
-        double remainingFats = targets.getFats();
-        double remainingCarbs = targets.getCarbs();
+        double remainingProteins = mealTargets.getProteins();
+        double remainingFats = mealTargets.getFats();
+        double remainingCarbs = mealTargets.getCarbs();
 
-        // 1. Seleccionar fuente de Proteína
-        Food proteinSource = findBestFoodForMacro(allFoods, "protein");
-        if (proteinSource != null) {
+        // 1. Añadir Proteína (80% del objetivo de la comida)
+        if (proteinSource != null && proteinSource.getProteins() > 0) {
             double quantity = (remainingProteins * 0.8) * 100 / proteinSource.getProteins();
-            recommendation.add(new RecommendedFoodDTO(proteinSource, Math.round(quantity)));
-
+            meal.add(new RecommendedFoodDTO(proteinSource, Math.round(quantity)));
             remainingProteins -= (proteinSource.getProteins() / 100) * quantity;
             remainingFats -= (proteinSource.getFats() / 100) * quantity;
             remainingCarbs -= (proteinSource.getCarbs() / 100) * quantity;
-            allFoods.remove(proteinSource);
         }
 
-        // 2. Seleccionar fuente de Carbohidratos
-        Food carbSource = findBestFoodForMacro(allFoods, "carbs");
-        if (carbSource != null && remainingCarbs > 0) {
-            double quantity = (remainingCarbs * 0.8) * 100 / carbSource.getCarbs();
-            recommendation.add(new RecommendedFoodDTO(carbSource, Math.round(quantity)));
-
-            remainingProteins -= (carbSource.getProteins() / 100) * quantity;
+        // 2. Añadir Carbohidratos
+        if (carbSource != null && carbSource.getCarbs() > 0 && remainingCarbs > 0) {
+            double quantity = remainingCarbs * 100 / carbSource.getCarbs();
+            meal.add(new RecommendedFoodDTO(carbSource, Math.round(quantity)));
             remainingFats -= (carbSource.getFats() / 100) * quantity;
-            remainingCarbs -= (carbSource.getCarbs() / 100) * quantity;
-            allFoods.remove(carbSource);
         }
 
-        // 3. Seleccionar "Relleno" de Grasas
-        Food fatSource = findBestFoodForMacro(allFoods, "fat");
-        if (fatSource != null && remainingFats > 0) {
+        // 3. Añadir Grasas
+        if (fatSource != null && fatSource.getFats() > 0 && remainingFats > 0) {
             double quantity = remainingFats * 100 / fatSource.getFats();
-            recommendation.add(new RecommendedFoodDTO(fatSource, Math.round(quantity)));
+            meal.add(new RecommendedFoodDTO(fatSource, Math.round(quantity)));
         }
 
-        return recommendation;
+        return meal;
     }
 
     /**
-     * Busca en una lista el alimento con el valor más alto del macronutriente especificado.
+     * Busca en una lista los N alimentos con el valor más alto del macronutriente especificado.
      */
-    private Food findBestFoodForMacro(List<Food> foods, String macro) {
-        Food bestFood = null;
-        double maxValue = -1;
+    /**
+     * Busca en una lista los N alimentos con la mayor "pureza" para un macronutriente específico.
+     * La "pureza" se mide como el % de calorías que provienen de ese macronutriente.
+     */
+    private List<Food> findTopNFoodsForMacro(List<Food> foods, String macro, int n) {
+        foods.sort((food1, food2) -> {
+            double score1 = 0;
+            double score2 = 0;
 
-        for (Food food : foods) {
-            switch (macro) {
-                case "protein":
-                    if (food.getProteins() > maxValue) {
-                        maxValue = food.getProteins();
-                        bestFood = food;
-                    }
-                    break;
-                case "carbs":
-                    if (food.getCarbs() > maxValue) {
-                        maxValue = food.getCarbs();
-                        bestFood = food;
-                    }
-                    break;
-                case "fat":
-                    if (food.getFats() > maxValue) {
-                        maxValue = food.getFats();
-                        bestFood = food;
-                    }
-                    break;
+            // Evitamos la división por cero si un alimento no tiene calorías
+            if (food1.getCalories() > 0) {
+                switch (macro) {
+                    case "protein":
+                        score1 = (food1.getProteins() * CALORIES_PER_PROTEIN_GRAM) / food1.getCalories();
+                        break;
+                    case "carbs":
+                        score1 = (food1.getCarbs() * CALORIES_PER_CARB_GRAM) / food1.getCalories();
+                        break;
+                    case "fat":
+                        score1 = (food1.getFats() * CALORIES_PER_FAT_GRAM) / food1.getCalories();
+                        break;
+                }
             }
+
+            if (food2.getCalories() > 0) {
+                switch (macro) {
+                    case "protein":
+                        score2 = (food2.getProteins() * CALORIES_PER_PROTEIN_GRAM) / food2.getCalories();
+                        break;
+                    case "carbs":
+                        score2 = (food2.getCarbs() * CALORIES_PER_CARB_GRAM) / food2.getCalories();
+                        break;
+                    case "fat":
+                        score2 = (food2.getFats() * CALORIES_PER_FAT_GRAM) / food2.getCalories();
+                        break;
+                }
+            }
+
+            // Orden descendente (de mayor a menor puntuación)
+            return Double.compare(score2, score1);
+        });
+
+        return new ArrayList<>(foods.subList(0, Math.min(n, foods.size())));
+    }
+
+    /**
+     * Calcula el resumen total de macros y calorías para la lista final de alimentos recomendados.
+     */
+    private MacroSummaryDTO calculateSummary(List<RecommendedFoodDTO> recommendationList) {
+        double finalCalories = 0;
+        double finalProteins = 0;
+        double finalCarbs = 0;
+        double finalFats = 0;
+
+        for (RecommendedFoodDTO item : recommendationList) {
+            double quantity = item.getQuantityInGrams();
+            Food food = item.getFoodDetails();
+
+            finalCalories += (food.getCalories() / 100) * quantity;
+            finalProteins += (food.getProteins() / 100) * quantity;
+            finalCarbs += (food.getCarbs() / 100) * quantity;
+            finalFats += (food.getFats() / 100) * quantity;
         }
-        return bestFood;
-    }
 
-
-private MacroSummaryDTO calculateSummary(List<RecommendedFoodDTO> recommendationList) {
-    double finalCalories = 0;
-    double finalProteins = 0;
-    double finalCarbs = 0;
-    double finalFats = 0;
-
-    for (RecommendedFoodDTO item : recommendationList) {
-        double quantity = item.getQuantityInGrams();
-        Food food = item.getFoodDetails();
-
-        finalCalories += (food.getCalories() / 100) * quantity;
-        finalProteins += (food.getProteins() / 100) * quantity;
-        finalCarbs += (food.getCarbs() / 100) * quantity;
-        finalFats += (food.getFats() / 100) * quantity;
-    }
-
-    return new MacroSummaryDTO(
-            Math.round(finalCalories),
-            Math.round(finalProteins),
-            Math.round(finalCarbs),
-            Math.round(finalFats)
-    );
+        return new MacroSummaryDTO(
+                Math.round(finalCalories),
+                Math.round(finalProteins),
+                Math.round(finalCarbs),
+                Math.round(finalFats)
+        );
     }
 }
-
