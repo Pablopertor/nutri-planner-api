@@ -129,25 +129,48 @@ public class FoodService {
     /**
      * Busca en una lista los N alimentos con el valor más alto del macronutriente especificado.
      */
+    /**
+     * Busca en una lista los N alimentos con la mayor "pureza" para un macronutriente específico.
+     * La "pureza" se mide como el % de calorías que provienen de ese macronutriente.
+     */
     private List<Food> findTopNFoodsForMacro(List<Food> foods, String macro, int n) {
         foods.sort((food1, food2) -> {
-            double value1 = 0, value2 = 0;
-            switch (macro) {
-                case "protein":
-                    value1 = food1.getProteins();
-                    value2 = food2.getProteins();
-                    break;
-                case "carbs":
-                    value1 = food1.getCarbs();
-                    value2 = food2.getCarbs();
-                    break;
-                case "fat":
-                    value1 = food1.getFats();
-                    value2 = food2.getFats();
-                    break;
+            double score1 = 0;
+            double score2 = 0;
+
+            // Evitamos la división por cero si un alimento no tiene calorías
+            if (food1.getCalories() > 0) {
+                switch (macro) {
+                    case "protein":
+                        score1 = (food1.getProteins() * CALORIES_PER_PROTEIN_GRAM) / food1.getCalories();
+                        break;
+                    case "carbs":
+                        score1 = (food1.getCarbs() * CALORIES_PER_CARB_GRAM) / food1.getCalories();
+                        break;
+                    case "fat":
+                        score1 = (food1.getFats() * CALORIES_PER_FAT_GRAM) / food1.getCalories();
+                        break;
+                }
             }
-            return Double.compare(value2, value1); // Orden descendente
+
+            if (food2.getCalories() > 0) {
+                switch (macro) {
+                    case "protein":
+                        score2 = (food2.getProteins() * CALORIES_PER_PROTEIN_GRAM) / food2.getCalories();
+                        break;
+                    case "carbs":
+                        score2 = (food2.getCarbs() * CALORIES_PER_CARB_GRAM) / food2.getCalories();
+                        break;
+                    case "fat":
+                        score2 = (food2.getFats() * CALORIES_PER_FAT_GRAM) / food2.getCalories();
+                        break;
+                }
+            }
+
+            // Orden descendente (de mayor a menor puntuación)
+            return Double.compare(score2, score1);
         });
+
         return new ArrayList<>(foods.subList(0, Math.min(n, foods.size())));
     }
 
