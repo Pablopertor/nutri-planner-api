@@ -1,5 +1,6 @@
 package com.nutriplannerapp.nutri_planner_api.service;
 
+import com.nutriplannerapp.nutri_planner_api.client.OpenFoodFactsClient;
 import com.nutriplannerapp.nutri_planner_api.dto.*;
 import com.nutriplannerapp.nutri_planner_api.model.Food;
 import com.nutriplannerapp.nutri_planner_api.repository.FoodRepository;
@@ -21,6 +22,9 @@ public class FoodService {
     @Autowired
     private FoodRepository foodRepository;
 
+    @Autowired
+    private OpenFoodFactsClient openFoodFactsClient;
+
     // =================================================================
     // --- MÉTODOS PÚBLICOS (API) ---
     // =================================================================
@@ -28,41 +32,57 @@ public class FoodService {
     /**
      * Orquesta el proceso de generación de una recomendación de 3 comidas.
      */
+//    public RecommendationResponseDTO generateRecommendation(RecommendationRequest request) {
+//        // 1. Calcular los objetivos DIARIOS totales
+//        MacroTargets dailyTargets = calculateMacroTargets(request);
+//
+//        // 2. Calcular los objetivos POR COMIDA (total / 3)
+//        MacroTargets mealTargets = new MacroTargets(
+//                dailyTargets.getProteins() / 3,
+//                dailyTargets.getFats() / 3,
+//                dailyTargets.getCarbs() / 3
+//        );
+//        System.out.println(String.format("OBJETIVO POR COMIDA -> Proteína: %.2fg, Grasas: %.2fg, Carbs: %.2fg",
+//                mealTargets.getProteins(), mealTargets.getFats(), mealTargets.getCarbs()));
+//
+//        // 3. Buscar los 3 MEJORES candidatos para cada macronutriente
+//        List<Food> allFoods = foodRepository.findAll();
+//        List<Food> top3ProteinSources = findTopNFoodsForMacro(new ArrayList<>(allFoods), "protein", 3);
+//        List<Food> top3CarbSources = findTopNFoodsForMacro(new ArrayList<>(allFoods), "carbs", 3);
+//        List<Food> top3FatSources = findTopNFoodsForMacro(new ArrayList<>(allFoods), "fat", 3);
+//
+//        // 4. Añadimos aleatoriedad desordenando las listas de candidatos
+//        Collections.shuffle(top3ProteinSources);
+//        Collections.shuffle(top3CarbSources);
+//        Collections.shuffle(top3FatSources);
+//
+//        // 5. Construir las 3 comidas
+//        List<RecommendedFoodDTO> finalRecommendation = new ArrayList<>();
+//        if (top3ProteinSources.size() >= 3 && top3CarbSources.size() >= 3 && top3FatSources.size() >= 3) {
+//            finalRecommendation.addAll(buildMeal(mealTargets, top3ProteinSources.get(0), top3CarbSources.get(0), top3FatSources.get(0)));
+//            finalRecommendation.addAll(buildMeal(mealTargets, top3ProteinSources.get(1), top3CarbSources.get(1), top3FatSources.get(1)));
+//            finalRecommendation.addAll(buildMeal(mealTargets, top3ProteinSources.get(2), top3CarbSources.get(2), top3FatSources.get(2)));
+//        }
+//
+//        // 6. Calcular el resumen final y devolver la respuesta
+//        MacroSummaryDTO summary = calculateSummary(finalRecommendation);
+//        return new RecommendationResponseDTO(finalRecommendation, summary);
+//    }
     public RecommendationResponseDTO generateRecommendation(RecommendationRequest request) {
-        // 1. Calcular los objetivos DIARIOS totales
-        MacroTargets dailyTargets = calculateMacroTargets(request);
 
-        // 2. Calcular los objetivos POR COMIDA (total / 3)
-        MacroTargets mealTargets = new MacroTargets(
-                dailyTargets.getProteins() / 3,
-                dailyTargets.getFats() / 3,
-                dailyTargets.getCarbs() / 3
-        );
-        System.out.println(String.format("OBJETIVO POR COMIDA -> Proteína: %.2fg, Grasas: %.2fg, Carbs: %.2fg",
-                mealTargets.getProteins(), mealTargets.getFats(), mealTargets.getCarbs()));
+        System.out.println("--- INICIANDO PRUEBA DE CONEXIÓN API EXTERNA ---");
 
-        // 3. Buscar los 3 MEJORES candidatos para cada macronutriente
-        List<Food> allFoods = foodRepository.findAll();
-        List<Food> top3ProteinSources = findTopNFoodsForMacro(new ArrayList<>(allFoods), "protein", 3);
-        List<Food> top3CarbSources = findTopNFoodsForMacro(new ArrayList<>(allFoods), "carbs", 3);
-        List<Food> top3FatSources = findTopNFoodsForMacro(new ArrayList<>(allFoods), "fat", 3);
+        // 1. Hacemos una llamada con una query
+        OffResponseDTO apiResponse = openFoodFactsClient.searchFoodByQuery("pollo");
 
-        // 4. Añadimos aleatoriedad desordenando las listas de candidatos
-        Collections.shuffle(top3ProteinSources);
-        Collections.shuffle(top3CarbSources);
-        Collections.shuffle(top3FatSources);
+        // 2. Imprimimos la respuesta en la consola para poder verla
+        System.out.println(apiResponse);
 
-        // 5. Construir las 3 comidas
-        List<RecommendedFoodDTO> finalRecommendation = new ArrayList<>();
-        if (top3ProteinSources.size() >= 3 && top3CarbSources.size() >= 3 && top3FatSources.size() >= 3) {
-            finalRecommendation.addAll(buildMeal(mealTargets, top3ProteinSources.get(0), top3CarbSources.get(0), top3FatSources.get(0)));
-            finalRecommendation.addAll(buildMeal(mealTargets, top3ProteinSources.get(1), top3CarbSources.get(1), top3FatSources.get(1)));
-            finalRecommendation.addAll(buildMeal(mealTargets, top3ProteinSources.get(2), top3CarbSources.get(2), top3FatSources.get(2)));
-        }
+        System.out.println("--- FIN DE LA PRUEBA ---");
 
-        // 6. Calcular el resumen final y devolver la respuesta
-        MacroSummaryDTO summary = calculateSummary(finalRecommendation);
-        return new RecommendationResponseDTO(finalRecommendation, summary);
+        // 3. Como esto es solo una prueba, devolvemos una respuesta vacía al cliente.
+        // El objetivo es ver el resultado en la consola de IntelliJ, no en Postman.
+        return new RecommendationResponseDTO(new ArrayList<>(), new MacroSummaryDTO(0, 0, 0, 0));
     }
 
     /**
