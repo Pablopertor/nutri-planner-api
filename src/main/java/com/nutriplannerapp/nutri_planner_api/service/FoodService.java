@@ -1,5 +1,6 @@
 package com.nutriplannerapp.nutri_planner_api.service;
 
+import com.nutriplannerapp.nutri_planner_api.dto.OffResponseDTO;
 import com.nutriplannerapp.nutri_planner_api.mapper.FoodMapper;
 import com.nutriplannerapp.nutri_planner_api.model.generated.Food;
 import com.nutriplannerapp.nutri_planner_api.client.OpenFoodFactsClient;
@@ -37,10 +38,10 @@ public class FoodService {
      * Orchestrates the process of generating a 3-meal recommendation.
      */
     public RecommendationResponse generateRecommendation(RecommendationRequest request) {
-        // 1. Calculate total daily targets
+        // 1. Calcular los objetivos DIARIOS totales
         MacroTargets dailyTargets = calculateMacroTargets(request);
 
-        // 2. Calculate targets PER MEAL (total / 3)
+        // 2. Calcular los objetivos POR COMIDA (total / 3)
         MacroTargets mealTargets = new MacroTargets();
         mealTargets.setProteins(dailyTargets.getProteins() / 3);
         mealTargets.setFats(dailyTargets.getFats() / 3);
@@ -49,18 +50,32 @@ public class FoodService {
         System.out.println(String.format("OBJECTIVE PER MEAL -> Protein: %.2fg, Fats: %.2fg, Carbs: %.2fg",
                 mealTargets.getProteins(), mealTargets.getFats(), mealTargets.getCarbs()));
 
-        // 3. Find the top 3 candidates for each macronutrient
-        List<com.nutriplannerapp.nutri_planner_api.model.persistence.Food> allFoodEntities = foodRepository.findAll();
-        List<Food> allFoodsApi = foodMapper.toApiList(allFoodEntities);
+        // ====================================================================================
+        // --- INICIO DE LA MODIFICACIÓN: OBTENER DATOS DE LA API EXTERNA ---
+        // ====================================================================================
+
+        // 3. Obtener candidatos desde la API de Open Food Facts
+        // Hacemos una búsqueda genérica para tener una buena base de alimentos variados.
+        OffResponseDTO apiResponse = openFoodFactsClient.searchFoodByQuery("food");
+
+        // 4. Convertir los resultados de la API externa a nuestra lista de DTOs de API (generated.Food)
+        List<Food> allFoodsApi = foodMapper.fromOffDtoListToApiDtoList(apiResponse.getProducts());
+
+        // ====================================================================================
+        // --- FIN DE LA MODIFICACIÓN ---
+        // ====================================================================================
+
+        // 5. Buscar los 3 MEJORES candidatos para cada macronutriente
         List<Food> top3ProteinSources = findTopNFoodsForMacro(new ArrayList<>(allFoodsApi), "protein", 3);
         List<Food> top3CarbSources = findTopNFoodsForMacro(new ArrayList<>(allFoodsApi), "carbs", 3);
         List<Food> top3FatSources = findTopNFoodsForMacro(new ArrayList<>(allFoodsApi), "fat", 3);
-        // 4. Add randomness by shuffling the candidate lists
+
+        // 6. Añadimos aleatoriedad desordenando las listas de candidatos
         Collections.shuffle(top3ProteinSources);
         Collections.shuffle(top3CarbSources);
         Collections.shuffle(top3FatSources);
 
-        // 5. Build the 3 meals
+        // 7. Construir las 3 comidas
         List<RecommendedFood> finalRecommendation = new ArrayList<>();
         if (top3ProteinSources.size() >= 3 && top3CarbSources.size() >= 3 && top3FatSources.size() >= 3) {
             finalRecommendation.addAll(buildMeal(mealTargets, top3ProteinSources.get(0), top3CarbSources.get(0), top3FatSources.get(0)));
@@ -68,7 +83,7 @@ public class FoodService {
             finalRecommendation.addAll(buildMeal(mealTargets, top3ProteinSources.get(2), top3CarbSources.get(2), top3FatSources.get(2)));
         }
 
-        // 6. Calculate the final summary and return the response
+        // 8. Calcular el resumen final y devolver la respuesta
         MacroSummary summary = calculateSummary(finalRecommendation);
 
         RecommendationResponse response = new RecommendationResponse();
@@ -113,6 +128,7 @@ public class FoodService {
         double remainingFats = mealTargets.getFats();
         double remainingCarbs = mealTargets.getCarbs();
 
+        // 1. Añadir Proteína (80% del objetivo de la comida)
         if (proteinSource != null && proteinSource.getProteins() > 0) {
             double quantity = (remainingProteins * 0.8) * 100 / proteinSource.getProteins();
             meal.add(new RecommendedFood().foodDetails(proteinSource).quantityInGrams((double) Math.round(quantity)));
@@ -121,12 +137,14 @@ public class FoodService {
             remainingCarbs -= (proteinSource.getCarbs() / 100) * quantity;
         }
 
+        // 2. Añadir Carbohidratos
         if (carbSource != null && carbSource.getCarbs() > 0 && remainingCarbs > 0) {
             double quantity = remainingCarbs * 100 / carbSource.getCarbs();
             meal.add(new RecommendedFood().foodDetails(carbSource).quantityInGrams((double) Math.round(quantity)));
             remainingFats -= (carbSource.getFats() / 100) * quantity;
         }
 
+        // 3. Añadir Grasas
         if (fatSource != null && fatSource.getFats() > 0 && remainingFats > 0) {
             double quantity = remainingFats * 100 / fatSource.getFats();
             meal.add(new RecommendedFood().foodDetails(fatSource).quantityInGrams((double) Math.round(quantity)));
