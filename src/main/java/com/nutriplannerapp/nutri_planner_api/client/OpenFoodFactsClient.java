@@ -1,5 +1,4 @@
 package com.nutriplannerapp.nutri_planner_api.client;
-
 import com.nutriplannerapp.nutri_planner_api.dto.OffResponseDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

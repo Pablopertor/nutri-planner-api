@@ -5,18 +5,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 @Data
-@JsonIgnoreProperties(ignoreUnknown = true) // Ignora campos del JSON que no tengamos en la clase
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class OffNutrimentsDTO {
 
     @JsonProperty("proteins_100g")
-    private double proteins;
+    private Double proteins;
 
     @JsonProperty("carbohydrates_100g")
-    private double carbs;
+    private Double carbs;
 
     @JsonProperty("fat_100g")
-    private double fats;
+    private Double fats;
 
     @JsonProperty("energy-kcal_100g")
-    private double calories;
+    private Double calories;
 }

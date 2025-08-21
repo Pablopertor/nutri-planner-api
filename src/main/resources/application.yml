@@ -1,0 +1,14 @@
+# Puerto de la aplicación
+server:
+  port: 8080
+
+# Configuración de Springdoc OpenAPI
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+  info:
+    title: NutriPlanner API
+    description: "API para la recomendación de planes nutricionales basados en macros."
+    version: "1.0.0"

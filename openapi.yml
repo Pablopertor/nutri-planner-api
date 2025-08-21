@@ -1,0 +1,110 @@
+openapi: 3.0.1
+info:
+  title: NutriPlanner API
+  description: API para la recomendación de planes nutricionales basados en macros.
+  version: "1.0.0"
+servers:
+  - url: http://localhost:8080
+    description: Servidor de desarrollo local
+
+paths:
+  /api/v1/food:
+    get:
+      summary: Obtener todos los alimentos
+      operationId: getAllFoods
+      responses:
+        '200':
+          description: Una lista de todos los alimentos.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Food'
+  /api/v1/recommendations:
+    post:
+      summary: Crear una recomendación
+      operationId: createRecommendation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecommendationRequest'
+      responses:
+        '200':
+          description: Recomendación generada con éxito.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendationResponse'
+
+components:
+  schemas:
+    Food:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        calories:
+          type: number
+          format: double
+        proteins:
+          type: number
+          format: double
+        carbs:
+          type: number
+          format: double
+        fats:
+          type: number
+          format: double
+    RecommendationRequest:
+      type: object
+      properties:
+        userWeight:
+          type: number
+          format: double
+        proteinPerKg:
+          type: number
+          format: double
+        totalCalories:
+          type: integer
+        fatPercentage:
+          type: integer
+        carbsPercentage:
+          type: integer
+    RecommendedFood:
+      type: object
+      properties:
+        foodDetails:
+          $ref: '#/components/schemas/Food'
+        quantityInGrams:
+          type: number
+          format: double
+    MacroSummary:
+      type: object
+      properties:
+        totalCalories:
+          type: number
+          format: double
+        totalProteins:
+          type: number
+          format: double
+        totalCarbs:
+          type: number
+          format: double
+        totalFats:
+          type: number
+          format: double
+    RecommendationResponse:
+      type: object
+      properties:
+        recommendedFoods:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecommendedFood'
+        summary:
+          $ref: '#/components/schemas/MacroSummary'
