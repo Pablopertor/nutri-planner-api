@@ -1,4 +1,4 @@
-package com.nutriplannerapp.nutri_planner_api.model;
+package com.nutriplannerapp.nutri_planner_api.model.persistence;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -9,9 +9,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@Entity
-@AllArgsConstructor
+@Entity // This tells JPA it's a database table
 @NoArgsConstructor
+@AllArgsConstructor
 public class Food {
 
     @Id
@@ -24,7 +24,7 @@ public class Food {
     private double carbs;
     private double fats;
 
-    // Constructor sin el ID para facilitar la creación de nuevos alimentos
+    // Constructor to easily create new food items without an ID
     public Food(String name, double calories, double proteins, double carbs, double fats) {
         this.name = name;
         this.calories = calories;
